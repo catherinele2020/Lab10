@@ -1,0 +1,190 @@
+---
+title: "Lab 10"
+author: Catherine Le
+format: 
+  html:
+    embed-resources: true
+editor: visual
+---
+
+# Lab 10
+
+# Setup
+
+```{r}
+library(RSQLite)
+library(DBI)
+
+# Initialize a temporary in memory database
+con <- dbConnect(SQLite(), ":memory:")
+
+# Download tables
+actor <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/actor.csv")
+rental <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/rental.csv")
+customer <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/customer.csv")
+payment <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/payment_p2007_01.csv")
+
+# Copy data.frames to database
+dbWriteTable(con, "actor", actor)
+dbWriteTable(con, "rental", rental)
+dbWriteTable(con, "customer", customer)
+dbWriteTable(con, "payment", payment)
+```
+
+```{r}
+dbListTables(con)
+```
+
+# Exercise 1
+
+```{sql connection = con}
+/* retrieves actor id, first name, last name */ 
+/* sorts by last name and then first name */ 
+SELECT actor_id, first_name, last_name
+FROM actor
+ORDER by last_name, first_name;
+```
+
+# Exercise 2
+
+```{sql connection = con}
+/* Retrieve the actor ID, first name, and last name for actors whose last name equals ‘WILLIAMS’ or ‘DAVIS’ */
+SELECT actor_id, first_name, last_name
+FROM actor
+WHERE last_name IN ('WILLIAMS', 'DAVIS')
+```
+
+# **Exercise 3**
+
+```{sql connection = con}
+/* returns the IDs of the customers who rented a film on July 5, 2005 */
+SELECT DISTINCT rental.customer_id
+FROM rental
+WHERE date(rental.rental_date ) = '2005-07-05'
+```
+
+# **Exercise 4**
+
+## **Exercise 4.1**
+
+```{sql connection = con}
+/* select all rows from payment table where amount = 1.99, 7.99, 9.99  */
+SELECT *
+FROM payment
+WHERE amount IN (1.99, 7.99, 9.99)
+```
+
+## **Exercise 4.2**
+
+```{sql connection = con}
+/* retrieves all rows from the payment table where the amount is greater then 5 */
+SELECT *
+FROM payment
+WHERE amount > 5
+```
+
+## **Exercise 4.3**
+
+```{sql connection = con}
+/* retrieves all rows from the payment table where the amount is greater then 5 and less then 8 */
+SELECT *
+FROM payment
+WHERE amount > 5 AND amount < 8
+```
+
+# **Exercise 5**
+
+```{sql connection = con}
+/* Retrieve all the payment IDs and their amounts from the customers whose last name is ‘DAVIS’ */
+SELECT payment.payment_id, payment.amount
+FROM payment
+INNER JOIN customer ON payment.customer_id = customer.customer_id
+WHERE customer.last_name IN ('DAVIS')
+```
+
+# **Exercise 6**
+
+## **Exercise 6.1**
+
+```{sql connection = con}
+/* Use COUNT(*) to count the number of rows in rental */
+SELECT COUNT(*) as TotalCount
+FROM rental
+```
+
+## **Exercise 6.2**
+
+```{sql connection = con}
+/* Use COUNT(*) and GROUP BY to count the number of rentals for each customer_id. */
+SELECT COUNT(*) as NumOfRentals, customer_id
+FROM rental
+GROUP BY customer_id
+```
+
+## **Exercise 6.3**
+
+```{sql connection = con}
+/* sorts the count by descending order */
+SELECT COUNT(*) as NumOfRentals, customer_id
+FROM rental
+GROUP BY customer_id
+ORDER BY NumOfRentals desc
+```
+
+## **Exercise 6.4**
+
+```{sql connection = con}
+/* groups of 40 or more */
+SELECT COUNT(*) AS NumOfRentals, customer_id
+FROM rental
+GROUP BY customer_id
+HAVING COUNT(*) > 40
+ORDER BY NumOfRentals DESC;
+```
+
+# **Exercise 7**
+
+```{sql connection = con}
+SELECT
+  MAX(amount) AS max_amount,
+  MIN(amount) AS min_amount,
+  AVG(amount) AS avg_amount,
+  SUM(amount) AS total_amount
+FROM payment;
+```
+
+## Exercise 7.1
+
+```{sql connection = con}
+/* modify the above query to do those calculations for each customer_id */
+SELECT
+  customer_id,
+  MAX(amount) AS max_amount,
+  MIN(amount) AS min_amount,
+  AVG(amount) AS avg_amount,
+  SUM(amount) AS total_amount
+FROM payment
+GROUP BY customer_id
+```
+
+## Exercise 7.2
+
+```{sql connection = con}
+/* modify the above query to only keep the customer_ids that have more then 5 payments */
+SELECT
+  customer_id,
+  MAX(amount) AS max_amount,
+  MIN(amount) AS min_amount,
+  AVG(amount) AS avg_amount,
+  SUM(amount) AS total_amount
+FROM payment
+GROUP BY customer_id
+HAVING COUNT(*) > 5
+```
+
+# Cleanup
+
+```{r}
+# clean up
+dbDisconnect(con)
+```
